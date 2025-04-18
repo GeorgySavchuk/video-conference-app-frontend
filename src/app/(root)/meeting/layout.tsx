@@ -1,6 +1,4 @@
 import React, {ReactNode} from 'react';
-import Navbar from '@/widgets/Navbar';
-import Sidebar from '@/widgets/Sidebar';
 
 type Props = {
     children: ReactNode;

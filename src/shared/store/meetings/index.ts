@@ -8,6 +8,7 @@ type ApiErrorResponse = {
     message?: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface CustomAxiosError extends AxiosError<ApiErrorResponse> {}
 
 export const getUpcomingMeetings = createEvent<string>();
@@ -57,8 +58,8 @@ export const fetchCurrentMeetingFx = createEffect<string, Meeting | null, Custom
 export const checkMediaPermissionsFx = createEffect(async () => {
     try {
         const [cameraPerm, micPerm] = await Promise.all([
-            navigator.permissions.query({ name: 'camera' as any }),
-            navigator.permissions.query({ name: 'microphone' as any })
+            navigator.permissions.query({ name: 'camera' }),
+            navigator.permissions.query({ name: 'microphone' })
         ]);
         
         return {

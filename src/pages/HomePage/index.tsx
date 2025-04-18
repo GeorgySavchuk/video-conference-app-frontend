@@ -12,7 +12,7 @@ const HomePage = () => {
     
     useEffect(() => {
         fetchMeetings(String(user.ID))
-    }, [])
+    }, [fetchMeetings, user.ID])
 
     const nextMeeting = upcomingMeetings?.[0];
 

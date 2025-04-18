@@ -1,6 +1,6 @@
 'use client'
 import React, { useEffect, useState } from 'react'
-import { useMeeting, useMediaDevice } from '@videosdk.live/react-sdk'
+import { useMeeting } from '@videosdk.live/react-sdk'
 import { Select, SelectItem } from '@/shared/ui/select'
 import { Button } from '@/shared/ui/button'
 import { Settings, Mic, Video, Headphones } from 'lucide-react'
@@ -11,14 +11,7 @@ interface Device {
 }
 
 export const DeviceSelector = () => {
-  const { 
-    changeMic,
-    changeWebcam,
-    changeAudioOutput,
-    getMicrophones,
-    getCameras,
-    getAudioOutputDevices
-  } = useMeeting()
+  const { changeMic, changeWebcam } = useMeeting()
   
   const [devices, setDevices] = useState<{
     microphones: Device[]
@@ -38,62 +31,76 @@ export const DeviceSelector = () => {
 
   const [isOpen, setIsOpen] = useState(false)
 
-  // Загрузка устройств
-  const loadDevices = async () => {
+  const getDevices = async () => {
     try {
-      const [mics, cams, speakers] = await Promise.all([
-        getMicrophones(),
-        getCameras(),
-        getAudioOutputDevices()
-      ])
-
-      setDevices({
-        microphones: mics.map(d => ({
+      const devices = await navigator.mediaDevices.enumerateDevices()
+      
+      const microphones = devices
+        .filter(device => device.kind === 'audioinput')
+        .map(d => ({
           id: d.deviceId,
           label: d.label || `Microphone ${d.deviceId.slice(0, 4)}`
-        })),
-        cameras: cams.map(d => ({
+        }))
+
+      const cameras = devices
+        .filter(device => device.kind === 'videoinput')
+        .map(d => ({
           id: d.deviceId,
           label: d.label || `Camera ${d.deviceId.slice(0, 4)}`
-        })),
-        speakers: speakers.map(d => ({
+        }))
+
+      const speakers = devices
+        .filter(device => device.kind === 'audiooutput')
+        .map(d => ({
           id: d.deviceId,
           label: d.label || `Speaker ${d.deviceId.slice(0, 4)}`
         }))
+
+      setDevices({
+        microphones,
+        cameras,
+        speakers
       })
 
-      // Автовыбор устройств по умолчанию
-      if (mics.length > 0 && !selectedDevices.microphone) {
+      if (microphones.length > 0 && !selectedDevices.microphone) {
         setSelectedDevices(prev => ({
           ...prev,
-          microphone: mics[0].deviceId
+          microphone: microphones[0].id
         }))
       }
 
-      if (cams.length > 0 && !selectedDevices.camera) {
+      if (cameras.length > 0 && !selectedDevices.camera) {
         setSelectedDevices(prev => ({
           ...prev,
-          camera: cams[0].deviceId
+          camera: cameras[0].id
         }))
       }
 
       if (speakers.length > 0 && !selectedDevices.speaker) {
         setSelectedDevices(prev => ({
           ...prev,
-          speaker: speakers[0].deviceId
+          speaker: speakers[0].id
         }))
       }
     } catch (error) {
-      console.error('Error loading devices:', error)
+      console.error('Error enumerating devices:', error)
     }
   }
 
-  // Первоначальная загрузка и подписка на изменения
   useEffect(() => {
-    loadDevices()
+    const initialize = async () => {
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true, video: true })
+        getDevices()
+      } catch (error) {
+        console.error('Error getting user media:', error)
+      }
+    }
+
+    initialize()
 
     const handleDeviceChange = () => {
-      loadDevices()
+      getDevices()
     }
 
     navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange)
@@ -101,28 +108,25 @@ export const DeviceSelector = () => {
     return () => {
       navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange)
     }
-  }, [])
+  })
 
-  // Обновление устройств при изменении выбора
   useEffect(() => {
-    const updateDevices = async () => {
-      try {
-        if (selectedDevices.microphone) {
-          await changeMic(selectedDevices.microphone)
-        }
-        if (selectedDevices.camera) {
-          await changeWebcam(selectedDevices.camera)
-        }
-        if (selectedDevices.speaker) {
-          await changeAudioOutput(selectedDevices.speaker)
-        }
-      } catch (error) {
-        console.error('Error changing devices:', error)
-      }
+    if (selectedDevices.microphone) {
+      changeMic(selectedDevices.microphone)
+    }
+    if (selectedDevices.camera) {
+      changeWebcam(selectedDevices.camera)
     }
 
-    updateDevices()
-  }, [selectedDevices])
+    if (selectedDevices.speaker) {
+      const audioElements = document.querySelectorAll('audio')
+      audioElements.forEach(audio => {
+        if ('setSinkId' in audio) {
+          audio.setSinkId(selectedDevices.speaker);
+        }
+      })
+    }
+  }, [selectedDevices, changeMic, changeWebcam])
 
   return (
     <div className="relative">

@@ -4,7 +4,7 @@ import { MeetingProvider } from "@videosdk.live/react-sdk";
 import MeetingRoom from '@/widgets/MeetingRoom';
 import { useUnit } from 'effector-react';
 import { $user } from '@/shared/store/auth';
-import { $mediaState, checkMediaPermissionsFx } from '@/shared/store/meetings';
+import { checkMediaPermissionsFx } from '@/shared/store/meetings';
 import { $videoSDKToken } from '@/shared/store/videosdk';
 import { api } from '@/shared/lib/api';
 
@@ -15,7 +15,7 @@ type Props = {
 const MeetingPage = ({ meetingId }: Props) => {
     const [user] = useUnit([$user, $videoSDKToken]);
     
-    const [participantId] = useState(() => crypto.randomUUID());
+    const [participantId, setParticipantId] = useState<string>('');
     const [meetingInfo, setMeetingInfo] = useState<{
         date: string;
         startTime: string;
@@ -26,6 +26,9 @@ const MeetingPage = ({ meetingId }: Props) => {
     const checkPermissions = useUnit(checkMediaPermissionsFx);
 
     useEffect(() => {
+        // Генерация UUID только на клиенте
+        setParticipantId(crypto.randomUUID());
+
         const fetchMeetingData = async () => {
             try {
                 const response = await api.get(`/meetings/${meetingId}`);
@@ -44,7 +47,6 @@ const MeetingPage = ({ meetingId }: Props) => {
                 });
             } catch (error) {
                 console.error('Ошибка при получении информации о встрече:', error);
-                // Если не удалось получить данные, считаем что встреча активна
                 setMeetingInfo({
                     date: '',
                     startTime: '',
@@ -58,18 +60,21 @@ const MeetingPage = ({ meetingId }: Props) => {
         fetchMeetingData();
         checkPermissions();
         
-        window.history.pushState(null, '', window.location.href);
-        const handlePopState = () => {
+        // Проверка наличия window
+        if (typeof window !== 'undefined') {
             window.history.pushState(null, '', window.location.href);
-        };
-        window.addEventListener('popstate', handlePopState);
-        
-        return () => {
-            window.removeEventListener('popstate', handlePopState);
-        };
-    }, [meetingId, participantId]);
+            const handlePopState = () => {
+                window.history.pushState(null, '', window.location.href);
+            };
+            window.addEventListener('popstate', handlePopState);
+            
+            return () => {
+                window.removeEventListener('popstate', handlePopState);
+            };
+        }
+    }, [meetingId, checkPermissions]);
 
-    if (loading) {
+    if (loading || !participantId) {
         return (
             <div className="flex items-center justify-center h-screen">
                 <div className="text-2xl text-white">Загрузка информации о встрече...</div>

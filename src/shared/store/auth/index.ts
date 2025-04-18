@@ -13,6 +13,7 @@ type ApiErrorResponse = {
   message?: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface CustomAxiosError extends AxiosError<ApiErrorResponse> {}
 
 export const loginFormSubmitted = createEvent<AuthParams>();

@@ -89,7 +89,7 @@ const Controls = ({isScreenSharing}: Props) => {
     return () => {
       navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange)
     }
-  }, [])
+  })
 
   useEffect(() => {
     if (!audioRef.current || !selectedSpeaker) return
@@ -98,7 +98,6 @@ const Controls = ({isScreenSharing}: Props) => {
       try {
         if ('setSinkId' in audioRef.current!) {
           console.log('Attempting to set audio output to:', selectedSpeaker)
-          // @ts-ignore
           await audioRef.current.setSinkId(selectedSpeaker)
           console.log('Audio output successfully changed')
         }

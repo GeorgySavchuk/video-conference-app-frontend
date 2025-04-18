@@ -5,15 +5,13 @@ import { useUnit } from 'effector-react';
 import { 
   $currentMeeting,
   $meetingsError,
-  $meetingsLoading,
   getCurrentMeeting
 } from '@/shared/store/meetings';
 import { $user } from '@/shared/store/auth';
 
 const CurrentCall = () => {
-    const [currentMeeting, loading, error, fetchCurrentMeeting, user] = useUnit([
+    const [currentMeeting, error, fetchCurrentMeeting, user] = useUnit([
         $currentMeeting,
-        $meetingsLoading,
         $meetingsError,
         getCurrentMeeting,
         $user,
@@ -21,7 +19,7 @@ const CurrentCall = () => {
 
     useEffect(() => {
         fetchCurrentMeeting(String(user.ID));
-    }, []);
+    }, [fetchCurrentMeeting, user.ID]);
   
     if (error) {
         return null;

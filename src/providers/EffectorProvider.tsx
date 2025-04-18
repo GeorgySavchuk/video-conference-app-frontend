@@ -1,7 +1,7 @@
 'use client'
 
 import { Provider } from 'effector-react'
-import { fork, Scope } from 'effector'
+import { fork } from 'effector'
 import { ReactNode, useMemo } from 'react'
 
 export function EffectorProvider({ 

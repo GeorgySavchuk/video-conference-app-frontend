@@ -1,13 +1,12 @@
 'use client'
-import React, { useEffect } from 'react'
+import React from 'react'
 import {Controller, useForm, SubmitHandler} from "react-hook-form";
 import {CircularProgress} from "@mui/material";
 import Link from 'next/link';
 import styles from './styles.module.css'
 import cn from 'classnames'
 import { useUnit } from 'effector-react';
-import { $isAuthenticated, $registerError, $registerPending, registerFormSubmitted } from '@/shared/store/auth';
-import { useRouter } from 'next/navigation';
+import { $registerError, $registerPending, registerFormSubmitted } from '@/shared/store/auth';
 
 interface RegistrationFormValues {
     username: string;

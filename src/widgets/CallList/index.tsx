@@ -1,6 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import MeetingCard from '@/entities/MeetingCard';
 import { useUnit } from 'effector-react';
 import { $meetingsError, $meetingsLoading, $upcomingMeetings, getUpcomingMeetings } from '@/shared/store/meetings';
@@ -11,7 +10,7 @@ const CallList = () => {
 
     useEffect(() => {
       fetchMeetings(String(user.ID));
-    }, []);
+    }, [fetchMeetings, user.ID]);
 
     const isMeetingStarted = (date: string, startTime: string) => {
       const meetingDateTime = new Date(`${date}T${startTime}`);

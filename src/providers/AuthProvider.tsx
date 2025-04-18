@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { useUnit } from 'effector-react';
 import { 
   $authChecked, 
@@ -22,13 +22,13 @@ export const AuthProvider = ({
 
   useEffect(() => {
     _checkAuth();
-  }, []);
+  }, [_checkAuth]);
 
   useEffect(() => {
     if(isAuthenticated) {
       router.push("/")
     }
-  }, [authChecked, isAuthenticated]);
+  }, [authChecked, isAuthenticated, router]);
 
   if (!authChecked && !(pathname === '/sign-in' || pathname === '/sign-up')) {
     return (

@@ -35,7 +35,7 @@ const MeetingRoom = () => {
     
     useEffect(() => {
         join();
-    }, []);
+    }, [join]);
   
     useEffect(() => {
         setParticipantsList([...participants.keys()]);
