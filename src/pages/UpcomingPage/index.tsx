@@ -1,3 +1,4 @@
+import CallList from '@/widgets/CallList';
 import React from 'react';
 
 const UpcomingPage = () => {
@@ -7,7 +8,7 @@ const UpcomingPage = () => {
                 Предстоящие встречи
             </h1>
 
-            
+            <CallList />
         </section>
     );
 };

@@ -11,19 +11,4 @@ export const sidebarLinks: SidebarLinks = [
         route: '/upcoming',
         imgUrl: '/icons/upcoming.svg',
     },
-    {
-        label: 'Прошлые встречи',
-        route: '/previous',
-        imgUrl: '/icons/previous.svg',
-    },
-    {
-        label: 'Записи встреч',
-        route: '/recordings',
-        imgUrl: '/icons/recordings.svg',
-    },
-    {
-        label: 'Создать встречу',
-        route: '/personal-room',
-        imgUrl: '/icons/add-personal-room.svg',
-    },
 ];
