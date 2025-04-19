@@ -1,14 +1,24 @@
-import React from 'react';
-import MeetingPage from '@/pages/MeetingPage';
+"use client"
+import React, {useState, useEffect} from 'react';
+import dynamic from 'next/dynamic';
 
-const Meeting = async ({
-    params,
-}: {
-    params: Promise<{id: string}>,
-}) => {
-    const id = (await params).id;
-    
-    return (<MeetingPage meetingId={id} />);
+const MeetingPage = dynamic(
+  () => import('@/pages/MeetingPage'),
+  { 
+    ssr: false, 
+  }
+);
+
+const Meeting = () => {
+    const [isClient, setIsClient] = useState(false);
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
+
+    if (!isClient) return null;
+
+    return <MeetingPage />;
 };
 
 export default Meeting;

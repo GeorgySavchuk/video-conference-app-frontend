@@ -31,10 +31,6 @@ const SignInForm = () => {
 
     const confirmLogin: SubmitHandler<LoginFormValues> = ({username, password}) => {
         resetLoginError()
-        console.log( login({
-            username,
-            password,
-        }), '---PENIS');
         login({
             username,
             password,

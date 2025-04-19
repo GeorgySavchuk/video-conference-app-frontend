@@ -8,19 +8,14 @@ type AuthParams = {
   password: string;
 };
 
-type ApiErrorResponse = {
-  error?: string;
-  message?: string;
-}
+type CustomAxiosError = AxiosError<{ message: string }>;
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-interface CustomAxiosError extends AxiosError<ApiErrorResponse> {}
-
-export const loginFormSubmitted = createEvent<AuthParams>();
 export const registerFormSubmitted = createEvent<AuthParams>();
+export const loginFormSubmitted = createEvent<AuthParams>();
 export const resetLoginError = createEvent();
 export const checkAuth = createEvent();
-export const logout = createEvent(); 
+export const logout = createEvent();
+export const restoreUserFromStorage = createEvent<User>();
 
 export const $loginPending = createStore<boolean>(false);
 export const $loginError = createStore<{isError: boolean; message: string;}>({
@@ -33,11 +28,6 @@ export const $registerError = createStore<{isError: boolean; message: string;}>(
   isError: false, 
   message: ""
 });
-
-export const $isAuthenticated = createStore<boolean>(false);
-export const $authChecked = createStore<boolean>(false); 
-
-export const $user = createStore<User>({} as User)
 
 export const loginFx = createEffect<AuthParams, AuthResponse, CustomAxiosError>(
   async ({ username, password }) => {
@@ -73,7 +63,6 @@ export const checkAuthFx = createEffect<void, AuthResponse, CustomAxiosError>(
   async () => {
     try {
       const response = await api.get('/auth/validate');
-
       return response.data;
     } catch (err) {
       throw err;
@@ -83,57 +72,65 @@ export const checkAuthFx = createEffect<void, AuthResponse, CustomAxiosError>(
 
 export const logoutFx = createEffect<void, void, CustomAxiosError>(
   async () => {
-    await api.post('/auth/logout');
+    try {
+      await api.post('/auth/logout');
+    } finally {
+      localStorage.removeItem('user');
+    }
   }
 );
+
+export const $isAuthenticated = createStore<boolean>(false)
+  .on(checkAuthFx.done, () => true)
+  .on(loginFx.done, () => true)
+  .on(restoreUserFromStorage, () => true)
+  .on(logoutFx.done, () => false);
+
+export const $authChecked = createStore<boolean>(false)
+  .on(checkAuthFx.done, () => true)
+  .on(loginFx.done, () => true)
+  .on(restoreUserFromStorage, () => true)
+  .on(logoutFx.done, () => false);
+
+export const $user = createStore<User>({} as User)
+  .on(loginFx.doneData, (_, data) => {
+    const user = {
+      username: data.user.Name,
+      ID: data.user.ID,
+    };
+    localStorage.setItem('user', JSON.stringify(user));
+    return user;
+  })
+  .on(checkAuthFx.doneData, (_, data) => {
+    const user = {
+      username: data.user.Name,
+      ID: data.user.ID,
+    };
+    localStorage.setItem('user', JSON.stringify(user));
+    return user;
+  })
+  .on(restoreUserFromStorage, (_, user) => user)
+  .on(logoutFx.done, () => ({} as User));
 
 $loginPending
   .on([loginFx.pending, checkAuthFx.pending], (_, pending) => pending);
 
 $loginError
-  .on(loginFx.failData, (_, error) => ({
+  .on(loginFx.fail, (_, { error }) => ({
     isError: true,
-    message: error.response?.data?.error || 
-            error.response?.data?.message || 
-            error.message || 
-            'Ошибка авторизации'
+    message: error.response?.data?.message || 'Ошибка при входе',
   }))
-  .reset([resetLoginError, loginFx.done, logout]);
+  .reset([loginFormSubmitted, resetLoginError]);
 
 $registerPending
   .on(registerFx.pending, (_, pending) => pending);
 
 $registerError
-  .on(registerFx.failData, (_, error) => ({
+  .on(registerFx.fail, (_, { error }) => ({
     isError: true,
-    message: error.response?.data?.error || 
-            error.response?.data?.message || 
-            error.message || 
-            'Ошибка регистрации'
+    message: error.response?.data?.message || 'Ошибка при регистрации',
   }))
-  .reset([registerFx.done, registerFormSubmitted]);
-
-$isAuthenticated
-  .on(checkAuthFx.done, () => true)
-  .on(loginFx.done, () => true)
-  .on([logoutFx.done], () => false)
-  .reset(logout);
-
-$authChecked
-  .on(checkAuthFx.done, () => true)
-  .on(loginFx.done, () => true)
-  .reset(logout);
-
-$user
-  .on(loginFx.doneData, (_, data) => ({
-    username: data.user.Name,
-    ID: data.user.ID,
-  }))
-  .on(checkAuthFx.doneData, (_, data) => ({
-    username: data.user.Name,
-    ID: data.user.ID,
-  }))
-  .reset(logout)
+  .reset([registerFormSubmitted]);
 
 sample({
   clock: loginFormSubmitted,

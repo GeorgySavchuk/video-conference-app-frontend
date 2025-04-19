@@ -10,6 +10,7 @@ const MeetingRoom = () => {
     const [presenterId, setPresenterId] = useState<string | null>(null);
     const [participantsList, setParticipantsList] = useState<string[]>([]);
     const [mainParticipantId, setMainParticipantId] = useState<string | null>(null);
+    const [isInitialized, setIsInitialized] = useState(false);
     const lastActiveSpeakerId = useRef<string | null>(null);
     
     const { join, participants, activeSpeakerId, localParticipant } = useMeeting({
@@ -23,18 +24,30 @@ const MeetingRoom = () => {
         },
         onMeetingJoined: () => {
             console.log("Успешное подключение");
+            setIsInitialized(true);
         },
         onMeetingLeft: () => {
             console.log("Отключился от встречи");
+            setIsInitialized(false);
         },
         onError: (error) => {
             console.error("Ошибка в Meeting:", error);
             toast.error(`Ошибка: ${error.message}`);
+            setIsInitialized(false);
         },
     });
     
     useEffect(() => {
-        join();
+        const initializeMeeting = async () => {
+            try {
+                await join();
+            } catch (error) {
+                console.error("Ошибка при подключении к встрече:", error);
+                toast.error("Ошибка при подключении к встрече");
+            }
+        };
+
+        initializeMeeting();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
   
@@ -54,6 +67,10 @@ const MeetingRoom = () => {
     }, [presenterId, activeSpeakerId, mainParticipantId, localParticipant]);
 
     const otherParticipants = participantsList.filter(id => presenterId ? id : id !== mainParticipantId);
+
+    if (!isInitialized) {
+        return null;
+    }
 
     return (
         <div className='relative flex gap-10 h-full'>

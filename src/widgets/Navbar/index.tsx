@@ -9,12 +9,17 @@ import { $isAuthenticated, $user, logoutFx } from '@/shared/store/auth';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu';
 import { useRouter } from 'next/navigation';
 
-const Navbar = () => {
-    const [user, isAuthenticated, logout] = useUnit([$user, $isAuthenticated, logoutFx]);
+export const Navbar = () => {
     const router = useRouter();
+    const [isAuthenticated, user, logout] = useUnit([$isAuthenticated, $user, logoutFx]);
+
     const handleClick = () => {
         logout();
-        router.push('/sign-in');
+        router.push('/login');
+    }
+
+    if (!isAuthenticated) {
+        return null;
     }
 
     return (
@@ -31,23 +36,20 @@ const Navbar = () => {
             </Link>
 
             <div className="flex-between gap-5">
-                {
-                    isAuthenticated && user && 
-                        <div>
-                            <DropdownMenu>
-                                <DropdownMenuTrigger className="cursor-pointer">
-                                    <Avatar>
-                                        <AvatarFallback>{user.username[0]}</AvatarFallback>
-                                    </Avatar>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent>
-                                    <DropdownMenuLabel>{user.username}</DropdownMenuLabel>
-                                    <DropdownMenuSeparator/>
-                                    <DropdownMenuItem onClick={handleClick} className="cursor-pointer">Выйти</DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </div>
-                }
+                <div>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger className="cursor-pointer">
+                            <Avatar>
+                                <AvatarFallback>{user.username[0]}</AvatarFallback>
+                            </Avatar>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                            <DropdownMenuLabel>{user.username}</DropdownMenuLabel>
+                            <DropdownMenuSeparator/>
+                            <DropdownMenuItem onClick={handleClick} className="cursor-pointer">Выйти</DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
                 <MobileNav/>
             </div>
         </nav>
