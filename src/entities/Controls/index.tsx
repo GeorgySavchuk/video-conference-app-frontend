@@ -13,6 +13,7 @@ import {
   $mediaState,
   leaveMeetingFx
 } from '@/shared/store/meetings'
+import { toast } from 'sonner';
 
 type Props = {
   isScreenSharing: boolean;
@@ -35,6 +36,7 @@ const Controls = ({isScreenSharing}: Props) => {
     changeWebcam,
     localMicOn,
     localWebcamOn,
+    participants
   } = useMeeting()
   
   const { hasCameraPermission, hasMicrophonePermission } = useUnit($mediaState)
@@ -46,14 +48,22 @@ const Controls = ({isScreenSharing}: Props) => {
   const [isChangingDevice, setIsChangingDevice] = useState(false)
   const audioRef = useRef<HTMLAudioElement>(null)
 
+  const isSomeoneScreenSharing = () => {
+    const participantsList = [...participants.values()];
+    return participantsList.some(p => {
+      const screenShareStream = Array.from(p.streams?.values() || []).find(stream => 
+        stream.kind === 'share'
+      );
+      return screenShareStream !== undefined;
+    });
+  };
+
   const getDevices = async () => {
     try {
-      // Запрашиваем разрешение для получения меток устройств
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: true, 
         video: true 
       })
-      // Освобождаем поток
       stream.getTracks().forEach(track => track.stop())
       
       const devices = await navigator.mediaDevices.enumerateDevices()
@@ -89,7 +99,8 @@ const Controls = ({isScreenSharing}: Props) => {
     return () => {
       navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange)
     }
-  })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     if (!audioRef.current || !selectedSpeaker) return
@@ -129,14 +140,28 @@ const Controls = ({isScreenSharing}: Props) => {
 
   const handleToggleScreenShare = async () => {
     try {
+      if (isSomeoneScreenSharing() && !isScreenSharing) {
+        toast.error('Только один участник может демонстрировать экран')
+        return
+      }
+      
       await toggleScreenShare()
     } catch (error) {
       console.error('Screen share error:', error)
+      toast.error('Ошибка при демонстрации экрана')
     }
   }
 
   const handleLeave = async () => {
     try {
+      if (localWebcamOn) {
+        toggleWebcam()
+      }
+
+      if (localMicOn) {
+        toggleMic()
+      }
+
       await leaveMeetingFx()
       leave()
       router.push('/')
@@ -201,7 +226,6 @@ const Controls = ({isScreenSharing}: Props) => {
       
       setSelectedSpeaker(deviceId)
       
-      // Даем время на применение изменений
       await new Promise(resolve => setTimeout(resolve, 200))
       
       console.log('Speaker successfully changed')
@@ -215,6 +239,8 @@ const Controls = ({isScreenSharing}: Props) => {
   const cameras = devices.filter(d => d.kind === 'videoinput')
   const mics = devices.filter(d => d.kind === 'audioinput')
   const speakers = devices.filter(d => d.kind === 'audiooutput')
+  
+  const isScreenShareDisabled = isSomeoneScreenSharing() && !isScreenSharing
   
   return (
     <>
@@ -271,10 +297,11 @@ const Controls = ({isScreenSharing}: Props) => {
               {
                 'bg-green-400 hover:bg-green-600': isScreenSharing,
                 'bg-blue-600 hover:bg-blue-700': !isScreenSharing,
+                'opacity-50 cursor-not-allowed hover:scale-100': isScreenShareDisabled
               }
             )}
             onClick={handleToggleScreenShare}
-            disabled={isChangingDevice}
+            disabled={isChangingDevice || isScreenShareDisabled}
             aria-label="Toggle screen share"
           >
             <FaDesktop className="text-xl md:text-2xl" />

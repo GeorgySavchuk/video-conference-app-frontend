@@ -10,7 +10,8 @@ const CallList = () => {
 
     useEffect(() => {
       fetchMeetings(String(user.ID));
-    }, [fetchMeetings, user.ID]);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const isMeetingStarted = (date: string, startTime: string) => {
       const meetingDateTime = new Date(`${date}T${startTime}`);

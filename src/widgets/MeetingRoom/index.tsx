@@ -35,7 +35,8 @@ const MeetingRoom = () => {
     
     useEffect(() => {
         join();
-    }, [join]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
   
     useEffect(() => {
         setParticipantsList([...participants.keys()]);

@@ -22,7 +22,8 @@ export const AuthProvider = ({
 
   useEffect(() => {
     _checkAuth();
-  }, [_checkAuth]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if(isAuthenticated) {

@@ -45,20 +45,29 @@ const ParticipantView = ({
   const videoStream = useMemo(() => {
     if (webcamOn && webcamStream) {
       const stream = new MediaStream()
-      stream.addTrack(webcamStream.track)
+      stream.addTrack(webcamStream.track.clone())
       return stream
     }
     return null
   }, [webcamStream, webcamOn])
 
   useEffect(() => {
-    if (micRef.current && micOn && micStream) {
+    if (!micRef.current) return
+    
+    if (micOn && micStream) {
       const mediaStream = new MediaStream()
-      mediaStream.addTrack(micStream.track)
+      mediaStream.addTrack(micStream.track.clone())
       micRef.current.srcObject = mediaStream
       micRef.current.play().catch(console.error)
-    } else if (micRef.current) {
+    } else {
       micRef.current.srcObject = null
+    }
+    
+    return () => {
+      if (micRef.current) {
+         // eslint-disable-next-line react-hooks/exhaustive-deps
+        micRef.current.srcObject = null
+      }
     }
   }, [micStream, micOn])
 

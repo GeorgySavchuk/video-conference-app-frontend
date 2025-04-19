@@ -8,6 +8,7 @@ import {
   getCurrentMeeting
 } from '@/shared/store/meetings';
 import { $user } from '@/shared/store/auth';
+import { useRouter } from 'next/navigation';
 
 const CurrentCall = () => {
     const [currentMeeting, error, fetchCurrentMeeting, user] = useUnit([
@@ -16,10 +17,12 @@ const CurrentCall = () => {
         getCurrentMeeting,
         $user,
     ]);
+    const router = useRouter();
 
     useEffect(() => {
         fetchCurrentMeeting(String(user.ID));
-    }, [fetchCurrentMeeting, user.ID]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
   
     if (error) {
         return null;
@@ -28,6 +31,16 @@ const CurrentCall = () => {
     if (!currentMeeting || Object.keys(currentMeeting).length === 0) {
         return null;
     }
+
+    const handleJoinMeeting = () => {
+        if (currentMeeting.link) {
+            if (currentMeeting.link.startsWith('http')) {
+                window.open(currentMeeting.link, '_blank');
+            } else {
+                router.push(currentMeeting.link);
+            }
+        }
+    };
 
     return (
         <div className="p-4">
@@ -42,8 +55,7 @@ const CurrentCall = () => {
                 )}
                 link={currentMeeting.link}
                 buttonText="Присоединиться"
-                handleClick={() => {
-                }}
+                handleClick={handleJoinMeeting}
             />
         </div>
     );

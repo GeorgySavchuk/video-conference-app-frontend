@@ -12,7 +12,8 @@ const HomePage = () => {
     
     useEffect(() => {
         fetchMeetings(String(user.ID))
-    }, [fetchMeetings, user.ID])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
 
     const nextMeeting = upcomingMeetings?.[0];
 
