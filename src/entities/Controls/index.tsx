@@ -6,13 +6,6 @@ import { FaPhoneAlt, FaDesktop, FaHeadphones } from "react-icons/fa"
 import { useMeeting } from '@videosdk.live/react-sdk'
 import { cn } from '@/shared/lib/utils'
 import { useRouter } from 'next/navigation'
-import { useUnit } from 'effector-react'
-import { 
-  toggleMicrophone, 
-  toggleCamera, 
-  $mediaState,
-  leaveMeetingFx
-} from '@/shared/store/meetings'
 import { toast } from 'sonner';
 
 type Props = {
@@ -39,7 +32,6 @@ const Controls = ({isScreenSharing}: Props) => {
     participants
   } = useMeeting()
   
-  const { hasCameraPermission, hasMicrophonePermission } = useUnit($mediaState)
   const [showDeviceSettings, setShowDeviceSettings] = useState(false)
   const [devices, setDevices] = useState<Device[]>([])
   const [selectedMic, setSelectedMic] = useState('')
@@ -68,7 +60,6 @@ const Controls = ({isScreenSharing}: Props) => {
       
       const devices = await navigator.mediaDevices.enumerateDevices()
       setDevices(devices)
-      console.log('Available devices:', devices)
       
       const cameras = devices.filter(d => d.kind === 'videoinput')
       const mics = devices.filter(d => d.kind === 'audioinput')
@@ -85,21 +76,18 @@ const Controls = ({isScreenSharing}: Props) => {
       }
     } catch (error) {
       console.error('Error getting devices:', error)
+      toast.error('Ошибка доступа к устройствам')
     }
   }
 
   useEffect(() => {
     getDevices()
-    const handleDeviceChange = () => {
-      console.log('Device change detected')
-      getDevices()
-    }
+    const handleDeviceChange = () => getDevices()
     
     navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange)
     return () => {
       navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -108,9 +96,7 @@ const Controls = ({isScreenSharing}: Props) => {
     const setAudioOutput = async () => {
       try {
         if ('setSinkId' in audioRef.current!) {
-          console.log('Attempting to set audio output to:', selectedSpeaker)
           await audioRef.current.setSinkId(selectedSpeaker)
-          console.log('Audio output successfully changed')
         }
       } catch (error) {
         console.error('Error setting audio output:', error)
@@ -123,18 +109,18 @@ const Controls = ({isScreenSharing}: Props) => {
   const handleToggleCamera = async () => {
     try {
       await toggleWebcam()
-      toggleCamera(!localWebcamOn)
     } catch (error) {
       console.error('Camera toggle error:', error)
+      toast.error('Ошибка переключения камеры')
     }
   }
 
   const handleToggleMic = async () => {
     try {
       await toggleMic()
-      toggleMicrophone(!localMicOn)
     } catch (error) {
       console.error('Mic toggle error:', error)
+      toast.error('Ошибка переключения микрофона')
     }
   }
 
@@ -144,7 +130,6 @@ const Controls = ({isScreenSharing}: Props) => {
         toast.error('Только один участник может демонстрировать экран')
         return
       }
-      
       await toggleScreenShare()
     } catch (error) {
       console.error('Screen share error:', error)
@@ -153,22 +138,8 @@ const Controls = ({isScreenSharing}: Props) => {
   }
 
   const handleLeave = async () => {
-    try {
-      if (localWebcamOn) {
-        toggleWebcam()
-      }
-
-      if (localMicOn) {
-        toggleMic()
-      }
-
-      await leaveMeetingFx()
-      leave()
-      router.push('/')
-    } catch (error) {
-      console.error('Leave error:', error)
-      router.push('/')
-    }
+    leave()
+    router.push('/')
   }
   
   const handleMicChange = async (deviceId: string) => {
@@ -176,8 +147,6 @@ const Controls = ({isScreenSharing}: Props) => {
     
     try {
       setIsChangingDevice(true)
-      console.log('Changing mic to:', deviceId)
-      
       const wasMicOn = localMicOn
       if (wasMicOn) await toggleMic()
       
@@ -185,10 +154,9 @@ const Controls = ({isScreenSharing}: Props) => {
       setSelectedMic(deviceId)
       
       if (wasMicOn) await toggleMic()
-      
-      console.log('Mic successfully changed')
     } catch (error) {
       console.error('Error changing microphone:', error)
+      toast.error('Ошибка смены микрофона')
     } finally {
       setIsChangingDevice(false)
     }
@@ -199,8 +167,6 @@ const Controls = ({isScreenSharing}: Props) => {
     
     try {
       setIsChangingDevice(true)
-      console.log('Changing camera to:', deviceId)
-      
       const wasCameraOn = localWebcamOn
       if (wasCameraOn) await toggleWebcam()
       
@@ -208,32 +174,16 @@ const Controls = ({isScreenSharing}: Props) => {
       setSelectedCamera(deviceId)
       
       if (wasCameraOn) await toggleWebcam()
-      
-      console.log('Camera successfully changed')
     } catch (error) {
       console.error('Error changing camera:', error)
+      toast.error('Ошибка смены камеры')
     } finally {
       setIsChangingDevice(false)
     }
   }
 
-  const handleSpeakerChange = async (deviceId: string) => {
-    if (!deviceId || isChangingDevice) return
-    
-    try {
-      setIsChangingDevice(true)
-      console.log('Changing speaker to:', deviceId)
-      
-      setSelectedSpeaker(deviceId)
-      
-      await new Promise(resolve => setTimeout(resolve, 200))
-      
-      console.log('Speaker successfully changed')
-    } catch (error) {
-      console.error('Error changing speaker:', error)
-    } finally {
-      setIsChangingDevice(false)
-    }
+  const handleSpeakerChange = (deviceId: string) => {
+    setSelectedSpeaker(deviceId)
   }
 
   const cameras = devices.filter(d => d.kind === 'videoinput')
@@ -252,14 +202,10 @@ const Controls = ({isScreenSharing}: Props) => {
             className={cn(
               'p-3 md:p-4 rounded-full text-white cursor-pointer transition-all duration-300 hover:scale-110',
               'flex items-center justify-center shadow-lg',
-              {
-                'bg-green-400 hover:bg-green-600': localWebcamOn,
-                'bg-red-600 hover:bg-red-700': !localWebcamOn,
-                'opacity-50 cursor-not-allowed hover:scale-100': !hasCameraPermission
-              }
+              localWebcamOn ? 'bg-green-400 hover:bg-green-600' : 'bg-red-600 hover:bg-red-700'
             )}
             onClick={handleToggleCamera}
-            disabled={!hasCameraPermission || isChangingDevice}
+            disabled={isChangingDevice}
             aria-label="Toggle camera"
           >
             {localWebcamOn ? (
@@ -273,14 +219,10 @@ const Controls = ({isScreenSharing}: Props) => {
             className={cn(
               'p-3 md:p-4 rounded-full text-white cursor-pointer transition-all duration-300 hover:scale-110',
               'flex items-center justify-center shadow-lg',
-              {
-                'bg-green-400 hover:bg-green-600': localMicOn,
-                'bg-red-600 hover:bg-red-700': !localMicOn,
-                'opacity-50 cursor-not-allowed hover:scale-100': !hasMicrophonePermission
-              }
+              localMicOn ? 'bg-green-400 hover:bg-green-600' : 'bg-red-600 hover:bg-red-700'
             )}
             onClick={handleToggleMic}
-            disabled={!hasMicrophonePermission || isChangingDevice}
+            disabled={isChangingDevice}
             aria-label="Toggle microphone"
           >
             {localMicOn ? (
@@ -294,11 +236,8 @@ const Controls = ({isScreenSharing}: Props) => {
             className={cn(
               'p-3 md:p-4 rounded-full text-white cursor-pointer transition-all duration-300 hover:scale-110',
               'flex items-center justify-center shadow-lg',
-              {
-                'bg-green-400 hover:bg-green-600': isScreenSharing,
-                'bg-blue-600 hover:bg-blue-700': !isScreenSharing,
-                'opacity-50 cursor-not-allowed hover:scale-100': isScreenShareDisabled
-              }
+              isScreenSharing ? 'bg-green-400 hover:bg-green-600' : 'bg-blue-600 hover:bg-blue-700',
+              isScreenShareDisabled && 'opacity-50 cursor-not-allowed hover:scale-100'
             )}
             onClick={handleToggleScreenShare}
             disabled={isChangingDevice || isScreenShareDisabled}
@@ -311,9 +250,7 @@ const Controls = ({isScreenSharing}: Props) => {
             className={cn(
               'p-3 md:p-4 rounded-full text-white cursor-pointer transition-all duration-300 hover:scale-110',
               'bg-slate-600 hover:bg-slate-700 flex items-center justify-center shadow-lg',
-              {
-                'opacity-50 cursor-not-allowed hover:scale-100': isChangingDevice
-              }
+              isChangingDevice && 'opacity-50 cursor-not-allowed hover:scale-100'
             )}
             onClick={() => setShowDeviceSettings(!showDeviceSettings)}
             disabled={isChangingDevice}
@@ -326,9 +263,7 @@ const Controls = ({isScreenSharing}: Props) => {
             className={cn(
               'p-3 md:p-4 rounded-full text-white cursor-pointer transition-all duration-300 hover:scale-110',
               'bg-red-600 hover:bg-red-700 flex items-center justify-center shadow-lg',
-              {
-                'opacity-50 cursor-not-allowed hover:scale-100': isChangingDevice
-              }
+              isChangingDevice && 'opacity-50 cursor-not-allowed hover:scale-100'
             )}
             onClick={handleLeave}
             disabled={isChangingDevice}
@@ -354,7 +289,7 @@ const Controls = ({isScreenSharing}: Props) => {
                     className="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                     value={selectedCamera}
                     onChange={(e) => handleCameraChange(e.target.value)}
-                    disabled={!hasCameraPermission || isChangingDevice}
+                    disabled={isChangingDevice}
                   >
                     {cameras.map(camera => (
                       <option key={camera.deviceId} value={camera.deviceId}>
@@ -373,7 +308,7 @@ const Controls = ({isScreenSharing}: Props) => {
                     className="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                     value={selectedMic}
                     onChange={(e) => handleMicChange(e.target.value)}
-                    disabled={!hasMicrophonePermission || isChangingDevice}
+                    disabled={isChangingDevice}
                   >
                     {mics.map(mic => (
                       <option key={mic.deviceId} value={mic.deviceId}>

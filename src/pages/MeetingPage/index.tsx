@@ -10,7 +10,7 @@ const MeetingProvider = dynamic(
     () => import("@videosdk.live/react-sdk").then((mod) => mod.MeetingProvider),
     { ssr: false }
   );
-  const MeetingRoom = dynamic(() => import('@/widgets/MeetingRoom'), { ssr: false });
+const MeetingRoom = dynamic(() => import('@/widgets/MeetingRoom'), { ssr: false });
 
 type Props = {
     meetingId: string;
