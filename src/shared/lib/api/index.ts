@@ -1,7 +1,14 @@
 import axios from 'axios';
 
+const baseURL = process.env.NODE_ENV === 'production' 
+  ? '/api/proxy' 
+  : process.env.NEXT_PUBLIC_API_URL;
+
 export const api = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL,
+    baseURL,
+    headers: {
+      'Content-Type': 'application/json',
+    },
     withCredentials: true
 });
 

@@ -15,7 +15,7 @@ export const Navbar = () => {
 
     const handleClick = () => {
         logout();
-        router.push('/login');
+        router.push('/sign-in');
     }
 
     if (!isAuthenticated) {
