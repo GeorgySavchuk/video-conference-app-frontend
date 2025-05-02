@@ -44,10 +44,11 @@ const MeetingTypeList = () => {
 
     const createMeetingRoom = async () => {
         const meetingId = await createMeeting();
-        const newMeetingLink = `/meeting/${meetingId}`;
-        setMeetingLink(`${window.location.origin}${newMeetingLink}`);
-
+        
         if (meetingState === 'isScheduleMeeting' && date) {
+            const meetingDateTime = new Date(`${format(date, 'yyyy-MM-dd')}T${selectedTime}:00`);
+            const newMeetingLink = `/meeting/${meetingId}?start=${meetingDateTime.getTime()}&duration=${duration}`;
+            
             const meetingParams = {
                 creator_id: String(user.ID),
                 date: format(date, 'dd.MM.yyyy'),
@@ -56,9 +57,10 @@ const MeetingTypeList = () => {
                 description: values.description,
                 link: `${window.location.origin}${newMeetingLink}`,
             };
-
             _createNewMeeting(meetingParams);
-        } else if (meetingState === 'isInstantMeeting') {
+            setCallDetail(true);
+        } else {
+            const newMeetingLink = `/meeting/${meetingId}?start=${Date.now()}&duration=60`;
             router.push(newMeetingLink);
         }
     };

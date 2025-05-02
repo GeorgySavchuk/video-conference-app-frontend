@@ -40,6 +40,7 @@ const Controls = ({isScreenSharing}: Props) => {
   } = useMeeting()
   
   const { hasCameraPermission, hasMicrophonePermission } = useUnit($mediaState)
+  const leaveMeeting = useUnit(leaveMeetingFx);
   const [showDeviceSettings, setShowDeviceSettings] = useState(false)
   const [devices, setDevices] = useState<Device[]>([])
   const [selectedMic, setSelectedMic] = useState('')
@@ -162,7 +163,7 @@ const Controls = ({isScreenSharing}: Props) => {
         toggleMic()
       }
 
-      await leaveMeetingFx()
+      await leaveMeeting()
       leave()
       router.push('/')
     } catch (error) {

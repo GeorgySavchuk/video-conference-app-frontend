@@ -6,14 +6,16 @@ import { useMeeting } from '@videosdk.live/react-sdk';
 import Controls from '@/entities/Controls';
 import { toast } from 'sonner';
 
-const MeetingRoom = () => {
+const MeetingRoom = ({ timeLeft }: { 
+    timeLeft: number,  
+}) => {
     const [presenterId, setPresenterId] = useState<string | null>(null);
     const [participantsList, setParticipantsList] = useState<string[]>([]);
     const [mainParticipantId, setMainParticipantId] = useState<string | null>(null);
     const [isInitialized, setIsInitialized] = useState(false);
     const lastActiveSpeakerId = useRef<string | null>(null);
     
-    const { join, participants, activeSpeakerId, localParticipant } = useMeeting({
+    const { participants, activeSpeakerId, localParticipant, leave } = useMeeting({
         onPresenterChanged: (presenterId) => {
             setPresenterId(presenterId);
             if (presenterId) {
@@ -36,20 +38,16 @@ const MeetingRoom = () => {
             setIsInitialized(false);
         },
     });
-    
-    useEffect(() => {
-        const initializeMeeting = async () => {
-            try {
-                await join();
-            } catch (error) {
-                console.error("Ошибка при подключении к встрече:", error);
-                toast.error("Ошибка при подключении к встрече");
-            }
-        };
 
-        initializeMeeting();
+    useEffect(() => {
+        if (timeLeft <= 5) {
+          toast.warning(`До конца встречи осталось ${timeLeft} мин`);
+        }
+        if (timeLeft === 0) {
+          leave();
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+      }, [timeLeft]);
   
     useEffect(() => {
         setParticipantsList([...participants.keys()]);

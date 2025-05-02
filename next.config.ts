@@ -11,14 +11,6 @@ const nextConfig: NextConfig = {
     };
     return config;
   },
-  async rewrites() {
-    return [
-      {
-        source: '/api/proxy/:path*',
-        destination: 'http://192.168.56.1:8080/api/v1/:path*'
-      }
-    ];
-  },
   images: {
     domains: ['api.videosdk.live'],
   },
