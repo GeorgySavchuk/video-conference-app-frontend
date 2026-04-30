@@ -11,4 +11,9 @@ export const sidebarLinks: SidebarLinks = [
         route: '/upcoming',
         imgUrl: '/icons/upcoming.svg',
     },
+    {
+        label: 'Личный кабинет',
+        route: '/profile',
+        imgUrl: '/icons/profile.svg',
+    },
 ];

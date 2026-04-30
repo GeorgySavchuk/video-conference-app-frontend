@@ -91,19 +91,6 @@
   line-height: 1.5em;
 }
 
-@keyframes soundwave {
-  0%, 100% {
-    transform: scaleY(1);
-  }
-  50% {
-    transform: scaleY(2);
-  }
-}
-
-.animate-soundwave {
-  animation: soundwave 0.8s ease-in-out infinite;
-}
-
 .dark {
   --background: oklch(0.129 0.042 264.695);
   --foreground: oklch(0.984 0.003 247.858);
@@ -195,4 +182,135 @@
   .flex-between {
     @apply flex justify-between items-center;
   }
+}
+
+/* Вне @layer — только верхняя лента (не сетка): WebKit + ReactPlayer, жёсткий 16:9 в px */
+.meeting-webcam-slot {
+  box-sizing: border-box !important;
+  position: relative;
+  flex: 0 0 auto !important;
+  flex-shrink: 0 !important;
+  contain: strict;
+  min-width: 0;
+  min-height: 0;
+  width: 152px !important;
+  height: 85.5px !important;
+  max-width: min(152px, 42vw) !important;
+  max-height: min(85.5px, calc(min(152px, 42vw) * 9 / 16)) !important;
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+@media (min-width: 640px) {
+  .meeting-webcam-slot {
+    width: 176px !important;
+    height: 99px !important;
+    max-width: min(176px, 36vw) !important;
+    max-height: min(99px, calc(min(176px, 36vw) * 9 / 16)) !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .meeting-webcam-slot {
+    width: 200px !important;
+    height: 112.5px !important;
+    max-width: min(200px, 32vw) !important;
+    max-height: min(112.5px, calc(min(200px, 32vw) * 9 / 16)) !important;
+  }
+}
+
+.meeting-webcam-slot > .meeting-webcam-fill {
+  position: absolute;
+  inset: 0;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.meeting-webcam-slot .react-player,
+.meeting-webcam-slot .react-player > div {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+}
+
+.meeting-webcam-slot video {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: cover !important;
+}
+
+/* Спотлайт: превью остальных — под основным кадром на телефоне (полная ширина), справа на md+ */
+.meeting-webcam-slot.meeting-webcam-slot--sidebar {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  aspect-ratio: 16 / 9;
+  flex: 0 0 auto !important;
+}
+
+@media (max-width: 767px) {
+  .meeting-webcam-slot.meeting-webcam-slot--sidebar {
+    max-height: min(36svh, 260px) !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .meeting-webcam-slot.meeting-webcam-slot--sidebar {
+    max-height: min(50vh, 360px) !important;
+  }
+}
+
+/* Спотлайт на телефоне: лента «остальных» — горизонтальный скролл, фикс. ширина плитки */
+@media (max-width: 767px) {
+  aside.meeting-sidebar-scroll-x .meeting-webcam-slot.meeting-webcam-slot--sidebar {
+    width: min(78vw, 300px) !important;
+    max-width: min(78vw, 300px) !important;
+    max-height: none !important;
+  }
+}
+
+/* Чат / эмодзи-попап: Safari показывает широкий светлый скролл — скрываем полосу (прокрутка без изменений) */
+.room-chat-scroll-none,
+.room-chat-messages-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+/* Safari: не использовать display:none на ::-webkit-scrollbar — часто остаётся «белая» системная полоса */
+.room-chat-scroll-none::-webkit-scrollbar,
+.room-chat-messages-scroll::-webkit-scrollbar {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  width: 0px !important;
+  height: 0px !important;
+  background: transparent !important;
+}
+.room-chat-scroll-none::-webkit-scrollbar-button,
+.room-chat-messages-scroll::-webkit-scrollbar-button,
+.room-chat-scroll-none::-webkit-scrollbar-thumb,
+.room-chat-messages-scroll::-webkit-scrollbar-thumb,
+.room-chat-scroll-none::-webkit-scrollbar-track,
+.room-chat-messages-scroll::-webkit-scrollbar-track,
+.room-chat-scroll-none::-webkit-scrollbar-corner,
+.room-chat-messages-scroll::-webkit-scrollbar-corner {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }

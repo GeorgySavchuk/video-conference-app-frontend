@@ -2,6 +2,15 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  async redirects() {
+    return [
+      {
+        source: "/meeting/:path*",
+        destination: "/room/:path*",
+        permanent: false,
+      },
+    ];
+  },
   webpack: (config) => {
     config.resolve.fallback = {
       ...config.resolve.fallback,
@@ -11,11 +20,8 @@ const nextConfig: NextConfig = {
     };
     return config;
   },
-  images: {
-    domains: ['api.videosdk.live'],
-  },
   env: {
-    NEXT_PUBLIC_AUTH_TOKEN: process.env.NEXT_PUBLIC_AUTH_TOKEN,
+    NEXT_PUBLIC_SIGNALING_URL: process.env.NEXT_PUBLIC_SIGNALING_URL,
   },
 };
 

@@ -1,6 +1,10 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import HomePage from '@/pages/HomePage';
 
-const Home = () => <HomePage/>;
+const Home = () => (
+  <Suspense fallback={null}>
+    <HomePage />
+  </Suspense>
+);
 
 export default Home;

@@ -1,34 +1,32 @@
 'use client';
-import {useEffect} from 'react';
+import { useEffect, useState } from 'react';
 import MeetingCard from '@/entities/MeetingCard';
+import { cn } from '@/shared/lib/utils';
 import { useUnit } from 'effector-react';
-import { 
-  $currentMeeting,
-  $meetingsError,
-  getCurrentMeeting
-} from '@/shared/store/meetings';
-import { $user } from '@/shared/store/auth';
+import { $currentMeeting, $meetingsError } from '@/shared/store/meetings';
 import { useRouter } from 'next/navigation';
+import { formatMeetingTimeRange, isMeetingSlotActiveNow, parseMeetingTitle } from '@/shared/lib/meetingDisplay';
 
 const CurrentCall = () => {
-    const [currentMeeting, error, fetchCurrentMeeting, user] = useUnit([
-        $currentMeeting,
-        $meetingsError,
-        getCurrentMeeting,
-        $user,
-    ]);
+    const [currentMeeting, error] = useUnit([$currentMeeting, $meetingsError]);
     const router = useRouter();
+    const [, setUiTick] = useState(0);
 
     useEffect(() => {
-        fetchCurrentMeeting(String(user.ID));
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-  
+        if (!currentMeeting || Object.keys(currentMeeting).length === 0) return;
+        const t = window.setInterval(() => setUiTick((n) => n + 1), 1000);
+        return () => window.clearInterval(t);
+    }, [currentMeeting?.id]);
+
     if (error) {
         return null;
     }
 
     if (!currentMeeting || Object.keys(currentMeeting).length === 0) {
+        return null;
+    }
+
+    if (!isMeetingSlotActiveNow(currentMeeting)) {
         return null;
     }
 
@@ -42,39 +40,39 @@ const CurrentCall = () => {
         }
     };
 
+    const raw = currentMeeting.description || '';
+    const parts = raw.split('\n\n');
+    const title = parseMeetingTitle(raw) || 'Текущая встреча';
+    const subtitle = parts.slice(1).join('\n\n').trim() || undefined;
+
     return (
-        <div className="p-4">
-            <h2 className="text-3xl font-bold text-white mb-4">Текущая встреча</h2>
-            <MeetingCard
-                icon="/icons/upcoming.svg"
-                title={currentMeeting.description || 'Текущая встреча'}
-                date={formatMeetingTimeRange(
-                    currentMeeting.date,
-                    currentMeeting.start_time,
-                    Number(currentMeeting.duration)
-                )}
-                link={currentMeeting.link}
-                buttonText="Присоединиться"
-                handleClick={handleJoinMeeting}
-            />
+        <div
+            className={cn(
+                'overflow-hidden rounded-2xl border border-white/[0.07] p-6 sm:p-8',
+                'bg-[#12151f]/90 shadow-[0_24px_80px_-12px_rgba(0,0,0,0.55)] backdrop-blur-xl',
+                'ring-1 ring-white/[0.04]'
+            )}
+        >
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
+                Текущая встреча
+            </p>
+            <div className="mt-4">
+                <MeetingCard
+                    icon="/icons/upcoming.svg"
+                    title={title}
+                    subtitle={subtitle}
+                    date={formatMeetingTimeRange(
+                        currentMeeting.date,
+                        currentMeeting.start_time,
+                        Number(currentMeeting.duration)
+                    )}
+                    link={currentMeeting.link}
+                    buttonText="Присоединиться"
+                    handleClick={handleJoinMeeting}
+                />
+            </div>
         </div>
     );
 };
-
-function formatMeetingTimeRange(dateStr: string, startTime: string, duration: number): string {
-    try {
-        const [hours, minutes] = startTime.split(':').map(Number);
-        const startMinutes = hours * 60 + minutes;
-        
-        const endMinutes = startMinutes + duration;
-        const endHours = Math.floor(endMinutes / 60);
-        const endMins = endMinutes % 60;
-        const endTime = `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
-        
-        return `${dateStr} ${startTime}-${endTime}`;
-    } catch {
-        return `${dateStr} ${startTime}`;
-    }
-}
 
 export default CurrentCall;

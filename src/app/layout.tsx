@@ -18,12 +18,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="ru" className="dark">
       <head>
         <link rel="icon" href="/icons/logo.svg" type="image/svg+xml" />
       </head>
       <body
-        className={`${inter.className} antialiased bg-dark-2`}
+        className={`${inter.className} m-0 min-h-dvh antialiased bg-dark-2 p-0`}
       >
         <EffectorProvider>
           <AuthProvider>

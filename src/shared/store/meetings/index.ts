@@ -1,7 +1,12 @@
 import { createEffect, createEvent, createStore, sample } from 'effector';
 import { AxiosError } from 'axios';
 import { api } from '@/shared/lib/api';
-import { CreateMeetingParams, Meeting } from '@/shared/types';
+import {
+    CancelMeetingResult,
+    CreateMeetingParams,
+    CreateMeetingResult,
+    Meeting,
+} from '@/shared/types';
 
 type ApiErrorResponse = {
     error?: string;
@@ -14,6 +19,8 @@ interface CustomAxiosError extends AxiosError<ApiErrorResponse> {}
 export const getUpcomingMeetings = createEvent<string>();
 export const getCurrentMeeting = createEvent<string>();
 export const createMeeting = createEvent<CreateMeetingParams>();
+/** Удаление запланированной встречи (creator); на бэкенде — письма об отмене подписчикам */
+export const cancelMeeting = createEvent<{ id: number; creator_id: string }>();
 export const resetMeetings = createEvent();
 export const resetErrors = createEvent();
 export const validationFailed = createEvent<string>();
@@ -34,10 +41,41 @@ export const fetchUpcomingMeetingsFx = createEffect<string, Meeting[], CustomAxi
     }
   );
 
-export const createMeetingFx = createEffect<CreateMeetingParams, Meeting, CustomAxiosError>(async (params) => {
-    const response = await api.post('/meetings', params);
-    return response.data;
+export const cancelMeetingFx = createEffect<
+    { id: number; creator_id: string },
+    CancelMeetingResult,
+    CustomAxiosError
+>(async ({ id, creator_id }) => {
+    const response = await api.delete<{
+        cancellation_emails_sent?: number;
+        cancellation_emails_failed?: string[];
+    }>(`/meetings/${id}`, { data: { creator_id } });
+    const failed = response.data.cancellation_emails_failed;
+    return {
+        cancellation_emails_sent: response.data.cancellation_emails_sent ?? 0,
+        cancellation_emails_failed: Array.isArray(failed) ? failed : [],
+    };
 });
+
+export const createMeetingFx = createEffect<CreateMeetingParams, CreateMeetingResult, CustomAxiosError>(
+    async (params) => {
+        const response = await api.post<{
+            data: Meeting;
+            invite_emails_sent?: number;
+            /** бэкенд отдаёт массив адресов с ошибкой доставки */
+            invite_emails_failed?: number | string[];
+        }>('/meetings', params);
+        const failedRaw = response.data.invite_emails_failed;
+        const inviteFailCount = Array.isArray(failedRaw)
+            ? failedRaw.length
+            : Number(failedRaw) || 0;
+        return {
+            meeting: response.data.data,
+            invite_emails_sent: response.data.invite_emails_sent ?? 0,
+            invite_emails_failed: inviteFailCount,
+        };
+    }
+);
 
 export const fetchCurrentMeetingFx = createEffect<string, Meeting | null, CustomAxiosError>(
     async (creator_id) => {
@@ -61,10 +99,12 @@ export const checkMediaPermissionsFx = createEffect(async () => {
             navigator.permissions.query({ name: 'camera' }),
             navigator.permissions.query({ name: 'microphone' })
         ]);
-        
+        // «prompt» — разрешение ещё не выдано и не отклонено; кнопки не должны быть
+        // заблокированы до «granted», иначе после успешного getUserMedia в комнате UI
+        // остаётся disabled (типичный случай при первом заходе на страницу встречи).
         return {
-            hasCameraPermission: cameraPerm.state === 'granted',
-            hasMicrophonePermission: micPerm.state === 'granted'
+            hasCameraPermission: cameraPerm.state !== 'denied',
+            hasMicrophonePermission: micPerm.state !== 'denied'
         };
     } catch (error) {
         console.error('Permission check error:', error);
@@ -98,12 +138,21 @@ export const $currentMeeting = createStore<Meeting | null>(null)
     .reset(resetMeetings);
 
 export const $meetingsLoading = createStore<boolean>(false)
-    .on([fetchUpcomingMeetingsFx.pending, fetchCurrentMeetingFx.pending, createMeetingFx.pending], 
-        (_, pending) => pending);
+    .on(
+        [
+            fetchUpcomingMeetingsFx.pending,
+            fetchCurrentMeetingFx.pending,
+            createMeetingFx.pending,
+            cancelMeetingFx.pending,
+        ],
+        (_, pending) => pending,
+    );
 
 export const $meetingsError = createStore<string | null>(null)
-    .on([fetchUpcomingMeetingsFx.failData, fetchCurrentMeetingFx.failData], 
-        (_, error) => error.response?.data?.error || error.message || 'Ошибка загрузки встреч')
+    .on(
+        [fetchUpcomingMeetingsFx.failData, fetchCurrentMeetingFx.failData, cancelMeetingFx.failData],
+        (_, error) => error.response?.data?.error || error.message || 'Ошибка загрузки встреч',
+    )
     .on(validationFailed, (_, message) => message)
     .reset([resetErrors, resetMeetings]);
 
@@ -154,7 +203,18 @@ sample({
 });
 
 sample({
-    clock: createMeetingFx.done,
-    source: createMeetingFx.done.map(({ params }) => params.creator_id),
-    target: getUpcomingMeetings
+  clock: createMeetingFx.done,
+  fn: ({ params }) => params.creator_id,
+  target: getUpcomingMeetings,
+});
+
+sample({
+    clock: cancelMeeting,
+    target: cancelMeetingFx,
+});
+
+sample({
+  clock: cancelMeetingFx.done,
+  fn: ({ params }) => params.creator_id,
+  target: getUpcomingMeetings,
 });

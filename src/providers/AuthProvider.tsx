@@ -9,6 +9,7 @@ import {
 } from '@/shared/store/auth';
 import {usePathname, useRouter} from 'next/navigation';
 import { CircularProgress } from '@mui/material';
+import { safeRedirectPath } from '@/shared/lib/safeRedirectPath';
 
 type AuthProviderProps = {
   children: React.ReactNode;
@@ -31,20 +32,27 @@ export const AuthProvider = ({
       const storedUser = localStorage.getItem('user');
       if (storedUser) {
         _restoreUser(JSON.parse(storedUser));
-      } else {
-        _checkAuth();
       }
+      /** Всегда подтягиваем юзера с сервера (avatar после регистрации / миграции, ник и т.д.). */
+      _checkAuth();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    if(isAuthenticated && (pathname === '/sign-in' || pathname === '/sign-up')) {
-      router.push("/")
-    }
-  }, [authChecked, isAuthenticated, router, pathname]);
+    if (!isAuthenticated || (pathname !== '/sign-in' && pathname !== '/sign-up')) return;
+    if (typeof window === 'undefined') return;
+    const raw = new URLSearchParams(window.location.search).get('next');
+    const next = safeRedirectPath(raw);
+    router.replace(next ?? '/');
+  }, [isAuthenticated, router, pathname]);
 
-  if (!authChecked && !(pathname === '/sign-in' || pathname === '/sign-up')) {
+  const allowBeforeAuth =
+    pathname === '/sign-in' ||
+    pathname === '/sign-up' ||
+    (pathname != null && pathname.startsWith('/room/'));
+
+  if (!authChecked && !allowBeforeAuth) {
     return (
       <div className="flex justify-center items-center h-screen">
         <CircularProgress />
