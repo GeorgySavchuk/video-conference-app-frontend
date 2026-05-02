@@ -9,10 +9,10 @@ import { $authChecked, $isAuthenticated, $user, checkAuth } from '@/shared/store
 import { checkMediaPermissionsFx } from '@/shared/store/meetings';
 import dynamic from 'next/dynamic';
 import { MediasoupMeetingProvider } from '@/features/mediasoup/MediasoupMeetingContext';
-import { MeetingReminderSubscribe } from '@/pages/MeetingPage/MeetingReminderSubscribe';
-import { MeetingPreJoin } from '@/pages/MeetingPage/MeetingPreJoin';
+import { MeetingReminderSubscribe } from '@/widgets/MeetingReminderSubscribe';
+import { MeetingPreJoin } from '@/widgets/MeetingPreJoin';
 import { parseRoomRoute } from '@/shared/lib/meetingUrlParams';
-import { MeetingLinkUnavailable } from '@/pages/MeetingPage/MeetingLinkUnavailable';
+import { MeetingLinkUnavailable } from '@/widgets/MeetingLinkUnavailable';
 
 const MeetingRoom = dynamic(() => import('@/widgets/MeetingRoom'), { ssr: false });
 

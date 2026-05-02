@@ -14,7 +14,7 @@ import {
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { UserAvatarDisplay } from '@/shared/ui/user-avatar';
-import { AvatarPickerDialog } from '@/pages/ProfilePage/AvatarPickerDialog';
+import { AvatarPickerDialog } from '@/widgets/AvatarPickerDialog';
 import { cn } from '@/shared/lib/utils';
 
 const INPUT_SHELL =
