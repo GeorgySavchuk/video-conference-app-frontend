@@ -15,6 +15,8 @@ import * as mediasoupClient from 'mediasoup-client';
 import type { types } from 'mediasoup-client';
 import { AxiosError } from 'axios';
 import { api } from '@/shared/lib/api';
+import { formatMeetingJoinError } from '@/shared/lib/meetingJoinErrors';
+import { ensureMediaDevices } from '@/shared/lib/media/ensureMediaDevices';
 import { $avatarImageNonce } from '@/shared/store/auth';
 
 export type ChatMessage = {
@@ -695,6 +697,7 @@ export function MediasoupMeetingProvider({
 
     const run = async () => {
       try {
+        ensureMediaDevices();
         await new Promise<void>((resolve, reject) => {
           ws.addEventListener('open', () => resolve(), { once: true });
           ws.addEventListener(
@@ -834,7 +837,10 @@ export function MediasoupMeetingProvider({
         if (!cancelled) setInitialized(true);
       } catch (e) {
         if (!cancelled) {
-          setJoinError((e as Error).message || 'Ошибка подключения');
+          if (process.env.NODE_ENV === 'development') {
+            console.error('join room failed', e);
+          }
+          setJoinError(formatMeetingJoinError(e));
         }
       }
     };
