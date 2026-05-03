@@ -161,6 +161,26 @@ function webcamVideoConstraints(deviceId?: string): MediaTrackConstraints {
   return { ...WEBCAM_CAPTURE };
 }
 
+/**
+ * Захват для входа в комнату: камера+мик → только мик → только камера → без дорожек (просмотр/чат).
+ * Раньше падали целиком, если нет камеры — конференция «не создавалась».
+ */
+async function acquireLocalStreamForJoin(): Promise<MediaStream> {
+  const attempts: MediaStreamConstraints[] = [
+    { audio: true, video: webcamVideoConstraints() },
+    { audio: true, video: false },
+    { video: webcamVideoConstraints() },
+  ];
+  for (const constraints of attempts) {
+    try {
+      return await navigator.mediaDevices.getUserMedia(constraints);
+    } catch {
+      /* следующий вариант */
+    }
+  }
+  return new MediaStream();
+}
+
 /** Исходящий VP8-слой вебки: выше битрейт — меньше «зернистости» от агрессивного сжатия при 720p/1080p. */
 const WEBCAM_SEND_ENCODING: types.RtpEncodingParameters = {
   maxBitrate: 4_200_000,
@@ -780,14 +800,14 @@ export function MediasoupMeetingProvider({
           }
         );
 
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-          video: webcamVideoConstraints(),
-        });
+        const stream = await acquireLocalStreamForJoin();
         localStreamRef.current = stream;
 
         const audioTrack = stream.getAudioTracks()[0];
         const videoTrack = stream.getVideoTracks()[0];
+
+        setLocalMicOn(Boolean(audioTrack));
+        setLocalWebcamOn(Boolean(videoTrack));
 
         if (audioTrack) {
           localAudioProducerRef.current = await sendTransport.produce({
@@ -811,7 +831,7 @@ export function MediasoupMeetingProvider({
           videoStream: videoTrack ? new MediaStream([videoTrack]) : null,
           audioStream: audioTrack ? new MediaStream([audioTrack]) : null,
           screenStream: null,
-          micOn: true,
+          micOn: Boolean(audioTrack),
           webcamOn: Boolean(videoTrack),
         });
 
