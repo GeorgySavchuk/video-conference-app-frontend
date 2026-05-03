@@ -3,6 +3,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: "standalone",
   reactStrictMode: true,
+  /** В Docker без отдельного image-worker sharp сильно грузит CPU на /_next/image */
+  images: { unoptimized: true },
   async redirects() {
     return [
       {
