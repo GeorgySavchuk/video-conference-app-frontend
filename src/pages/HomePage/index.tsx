@@ -26,6 +26,7 @@ import { cn } from '@/shared/lib/utils';
 import {
     formatMeetingClockRange,
     isMeetingSlotActiveNow,
+    isMeetingSlotNotEnded,
     parseMeetingTitle,
 } from '@/shared/lib/meetingDisplay';
 import Image from 'next/image';
@@ -73,15 +74,26 @@ const HomePage = () => {
         router.replace('/', { scroll: false });
     }, [searchParams, router]);
 
-    const nextMeeting = upcomingMeetings?.[0];
+    const nextMeeting = useMemo(() => {
+        void uiTick; // пересчёт раз в секунду: слот исчезает с главной без refetch
+        const list = upcomingMeetings ?? [];
+        const visible = list.filter((m) =>
+            isMeetingSlotNotEnded({
+                date: m.date,
+                start_time: m.start_time,
+                duration: Number(m.duration) || 0,
+            }),
+        );
+        return visible[0];
+    }, [upcomingMeetings, uiTick]);
     const rawCurrentMeeting =
         currentMeeting && typeof currentMeeting === 'object' && Object.keys(currentMeeting).length > 0
             ? currentMeeting
             : null;
-    const hasCurrentMeeting = useMemo(
-        () => Boolean(rawCurrentMeeting && isMeetingSlotActiveNow(rawCurrentMeeting)),
-        [rawCurrentMeeting, uiTick],
-    );
+    const hasCurrentMeeting = useMemo(() => {
+        void uiTick;
+        return Boolean(rawCurrentMeeting && isMeetingSlotActiveNow(rawCurrentMeeting));
+    }, [rawCurrentMeeting, uiTick]);
     let statusPillText: string;
     if (hasCurrentMeeting && rawCurrentMeeting) {
         const title = parseMeetingTitle(rawCurrentMeeting.description) || 'Встреча';

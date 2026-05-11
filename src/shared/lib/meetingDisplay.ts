@@ -29,27 +29,62 @@ export function formatMeetingTimeRange(dateStr: string, startTime: string, durat
     }
 }
 
+/** Границы слота в миллисекундах (локальное время браузера), как в форме создания встречи. */
+export function parseMeetingSlotBoundsMs(m: {
+    date: string;
+    start_time: string;
+    duration: number;
+}): { start: number; end: number } | null {
+    try {
+        const dp = m.date.trim().split('.');
+        if (dp.length !== 3) return null;
+        const ds = parseInt(dp[0]!, 10);
+        const mon = parseInt(dp[1]!, 10);
+        const ys = parseInt(dp[2]!, 10);
+        const tp = m.start_time.trim().split(':');
+        const hh = parseInt(tp[0]!, 10);
+        const mn = parseInt(tp[1]!, 10);
+        if ([ds, mon, ys, hh, mn].some((n) => Number.isNaN(n))) return null;
+        const startMs = new Date(ys, mon - 1, ds, hh, mn, 0, 0).getTime();
+        if (Number.isNaN(startMs)) return null;
+        const dur = Math.max(0, Number(m.duration) || 0);
+        const endMs = startMs + dur * 60 * 1000;
+        return { start: startMs, end: endMs };
+    } catch {
+        return null;
+    }
+}
+
+/** Слот ещё не закончился — встреча может отображаться в «предстоящих» после refetch. */
+export function isMeetingSlotNotEnded(m: {
+    date: string;
+    start_time: string;
+    duration: number;
+}): boolean {
+    const b = parseMeetingSlotBoundsMs(m);
+    return b !== null && b.end > Date.now();
+}
+
+/** Окно «Подключиться»: от начала до конца слота (локальное время браузера). */
+export function canJoinMeetingSlot(m: {
+    date: string;
+    start_time: string;
+    duration: number;
+}): boolean {
+    const b = parseMeetingSlotBoundsMs(m);
+    if (!b) return false;
+    const now = Date.now();
+    return now >= b.start && now < b.end;
+}
+
 /** Слот встречи по полям date / start_time / duration (локальная дата-время), для UI без ожидания refetch. */
 export function isMeetingSlotActiveNow(m: {
     date: string;
     start_time: string;
     duration: number;
 }): boolean {
-    try {
-        const dp = m.date.split('.');
-        if (dp.length !== 3) return true;
-        const ds = parseInt(dp[0]!, 10);
-        const mon = parseInt(dp[1]!, 10);
-        const ys = parseInt(dp[2]!, 10);
-        const tp = m.start_time.split(':');
-        const hh = parseInt(tp[0]!, 10);
-        const mn = parseInt(tp[1]!, 10);
-        if ([ds, mon, ys, hh, mn].some((n) => Number.isNaN(n))) return true;
-        const startMs = new Date(ys, mon - 1, ds, hh, mn, 0, 0).getTime();
-        const endMs = startMs + m.duration * 60 * 1000;
-        const now = Date.now();
-        return now >= startMs && now < endMs;
-    } catch {
-        return true;
-    }
+    const b = parseMeetingSlotBoundsMs(m);
+    if (!b) return true;
+    const now = Date.now();
+    return now >= b.start && now < b.end;
 }

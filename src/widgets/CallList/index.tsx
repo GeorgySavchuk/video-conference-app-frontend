@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import MeetingCard from '@/entities/MeetingCard';
 import { useUnit } from 'effector-react';
@@ -23,28 +23,17 @@ import {
 } from '@/shared/store/meetings';
 import { $user } from '@/shared/store/auth';
 import { cn } from '@/shared/lib/utils';
+import {
+    canJoinMeetingSlot,
+    formatMeetingTimeRange,
+    isMeetingSlotNotEnded,
+} from '@/shared/lib/meetingDisplay';
 
 const LIST_CARD_SHELL = cn(
     'overflow-hidden rounded-2xl border border-white/[0.07]',
     'bg-[#12151f]/85 shadow-[0_24px_80px_-12px_rgba(0,0,0,0.55)] backdrop-blur-xl',
     'ring-1 ring-inset ring-white/[0.04]'
 );
-
-/** Дата встречи с API в формате ДД.ММ.ГГГГ, время ЧЧ:ММ (локальное время браузера). */
-function isMeetingStarted(date: string, startTime: string): boolean {
-  const parts = date.trim().split('.');
-  const timeParts = startTime.trim().split(':');
-  if (parts.length !== 3 || timeParts.length < 2) return false;
-  const d = Number(parts[0]);
-  const m = Number(parts[1]);
-  const y = Number(parts[2]);
-  const hh = Number(timeParts[0]);
-  const mm = Number(timeParts[1]);
-  if ([d, m, y, hh, mm].some((n) => Number.isNaN(n))) return false;
-  const start = new Date(y, m - 1, d, hh, mm, 0, 0);
-  if (Number.isNaN(start.getTime())) return false;
-  return start.getTime() <= Date.now();
-}
 
 const CallList = () => {
     const router = useRouter();
@@ -65,6 +54,13 @@ const CallList = () => {
       if (!user?.ID) return;
       fetchMeetings(String(user.ID));
     }, [user?.ID, fetchMeetings]);
+
+    /** Тик, чтобы после окончания слота карточка пропала без ручного refetch (локальное время). */
+    const [slotTick, setSlotTick] = useState(0);
+    useEffect(() => {
+        const id = window.setInterval(() => setSlotTick((n) => n + 1), 1000);
+        return () => window.clearInterval(id);
+    }, []);
 
     useEffect(() => {
         const offFail = cancelMeetingFx.fail.watch(({ error }) => {
@@ -110,14 +106,30 @@ const CallList = () => {
       }
     };
 
-    const meetings = apiMeetings.map((meeting) => ({
+    const visibleMeetings = useMemo(
+        () =>
+            apiMeetings.filter((m) =>
+                isMeetingSlotNotEnded({
+                    date: m.date,
+                    start_time: m.start_time,
+                    duration: Number(m.duration) || 0,
+                }),
+            ),
+        [apiMeetings, slotTick],
+    );
+
+    const meetings = visibleMeetings.map((meeting) => ({
         id: meeting.id,
         date: meeting.date,
         start_time: meeting.start_time,
         duration: meeting.duration,
         description: meeting.description,
         link: meeting.link,
-        isActive: isMeetingStarted(meeting.date, meeting.start_time),
+        canJoin: canJoinMeetingSlot({
+            date: meeting.date,
+            start_time: meeting.start_time,
+            duration: Number(meeting.duration) || 0,
+        }),
     }));
 
     const openCancelDialog = (meetingId: number, title: string) => {
@@ -241,7 +253,7 @@ const CallList = () => {
               date={formatMeetingTimeRange(meeting.date, meeting.start_time, Number(meeting.duration))}
               link={meeting.link}
               buttonText="Подключиться"
-              isButtonDisabled={!meeting.isActive}
+              isButtonDisabled={!meeting.canJoin}
               handleClick={() => openMeeting(meeting.link)}
               onCancel={() =>
                 openCancelDialog(meeting.id, meeting.description?.trim() || 'Без описания')
@@ -274,21 +286,5 @@ const CallList = () => {
       </div>
     );
 };
-
-function formatMeetingTimeRange(dateStr: string, startTime: string, duration: number): string {
-  try {
-    const [hours, minutes] = startTime.split(':').map(Number);
-    const startMinutes = hours * 60 + minutes;
-    
-    const endMinutes = startMinutes + duration;
-    const endHours = Math.floor(endMinutes / 60);
-    const endMins = endMinutes % 60;
-    const endTime = `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
-    
-    return `${dateStr} ${startTime}-${endTime}`;
-  } catch {
-    return `${dateStr} ${startTime}`;
-  }
-}
 
 export default CallList;

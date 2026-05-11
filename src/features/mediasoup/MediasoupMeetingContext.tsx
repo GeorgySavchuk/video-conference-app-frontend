@@ -389,6 +389,16 @@ export function MediasoupMeetingProvider({
     >()
   );
 
+  /** newProducer до завершения device.load() — иначе consumeProducer молча выходил (нет device). */
+  const pendingNewProducersRef = useRef<
+    {
+      peerId: string;
+      producerId: string;
+      kind: types.MediaKind;
+      appData: Record<string, unknown>;
+    }[]
+  >([]);
+
   const mergePeer = useCallback(
     (
       pid: string,
@@ -597,12 +607,20 @@ export function MediasoupMeetingProvider({
     const onNotification = async (msg: WsNotification) => {
       const { event, data } = msg;
       if (event === 'newProducer') {
-        await consumeProducer(
-          data.peerId as string,
-          data.producerId as string,
-          data.kind as types.MediaKind,
-          (data.appData as Record<string, unknown>) || {}
-        );
+        const peerId = data.peerId as string;
+        const producerId = data.producerId as string;
+        const kind = data.kind as types.MediaKind;
+        const appData = (data.appData as Record<string, unknown>) || {};
+        if (!deviceRef.current) {
+          pendingNewProducersRef.current.push({
+            peerId,
+            producerId,
+            kind,
+            appData,
+          });
+          return;
+        }
+        await consumeProducer(peerId, producerId, kind, appData);
       }
       if (event === 'producerClosed') {
         detachConsumerByProducerId(data.producerId as string);
@@ -744,11 +762,38 @@ export function MediasoupMeetingProvider({
           peers: { peerId: string; displayName: string; avatar?: string }[];
         };
 
+        pendingNewProducersRef.current = [];
+
         const device = new mediasoupClient.Device();
         await device.load({
           routerRtpCapabilities: joinResult.routerRtpCapabilities,
         });
         deviceRef.current = device;
+
+        for (const p of joinResult.peers || []) {
+          mergePeer(p.peerId, {
+            displayName: p.displayName || 'Участник',
+            profileAvatar:
+              typeof p.avatar === 'string' && p.avatar.length > 0
+                ? p.avatar
+                : undefined,
+          });
+        }
+
+        for (const prod of joinResult.producers || []) {
+          await consumeProducer(
+            prod.peerId,
+            prod.producerId,
+            prod.kind,
+            prod.appData || {}
+          );
+        }
+
+        const queuedEarly = pendingNewProducersRef.current;
+        pendingNewProducersRef.current = [];
+        for (const q of queuedEarly) {
+          await consumeProducer(q.peerId, q.producerId, q.kind, q.appData);
+        }
 
         const sendInfo = (await request('createWebRtcTransport', {
           direction: 'send',
@@ -834,25 +879,6 @@ export function MediasoupMeetingProvider({
           micOn: Boolean(audioTrack),
           webcamOn: Boolean(videoTrack),
         });
-
-        for (const p of joinResult.peers || []) {
-          mergePeer(p.peerId, {
-            displayName: p.displayName || 'Участник',
-            profileAvatar:
-              typeof p.avatar === 'string' && p.avatar.length > 0
-                ? p.avatar
-                : undefined,
-          });
-        }
-
-        for (const prod of joinResult.producers || []) {
-          await consumeProducer(
-            prod.peerId,
-            prod.producerId,
-            prod.kind,
-            prod.appData || {}
-          );
-        }
 
         if (!cancelled) setInitialized(true);
       } catch (e) {
