@@ -50,4 +50,4 @@ yarn dev
 
 ## Деплой
 
-Приложение доступно по адресу: [https://hellconf.netlify.app/](https://hellconf.netlify.app/)
+Приложение доступно по адресу: [https://hellconf.ru/](https://hellconf.ru/)
